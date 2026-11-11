@@ -32,6 +32,11 @@ interface ImportMetaEnv {
   // GAUZY Server
   VITE_APP_GAUZY_API_URL: string;
 
+  // Ever Teams deployment used when a visit names no other
+  VITE_APP_EVER_TEAMS_URL: string;
+  // Comma-separated Ever Teams origins allowed to open the Board
+  VITE_APP_EVER_TEAMS_ORIGINS: string;
+
   // MATOMO
   VITE_APP_MATOMO_URL: string;
   VITE_APP_CDN_MATOMO_TRACKER_URL: string;

@@ -1,9 +1,8 @@
 import { atom, useSetAtom } from "jotai";
 import { CSSProperties, PropsWithChildren, useEffect, useState } from "react";
 import { EverTeamsLogo } from "../components/ever-teams-logo";
-import { EVER_TEAMS_URL } from "../app_constants";
+import { getEverTeamsOrigin } from "./everTeamsOrigin";
 
-const GAUZY_API_URL = import.meta.env.VITE_APP_GAUZY_API_URL;
 const TOKEN_COOKIE_NAME = "auth-token";
 const style = {
   display: "flex",
@@ -18,33 +17,120 @@ const style = {
 
 export const authUserAtom = atom<AuthUser | null>(null);
 
-const fetchAuthUser = async (access_token: string) => {
-  return fetch(`${GAUZY_API_URL}/user/me`, {
-    headers: {
-      Authorization: `Bearer ${access_token}`,
-    },
-  }).then<AuthUser>((res) => res.json());
+const toAuthUser = (data: unknown): AuthUser | null => {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+  const { id, name, imageUrl } = data as Record<string, unknown>;
+  if (typeof id !== "string" || !id) {
+    return null;
+  }
+  return {
+    id,
+    name: typeof name === "string" ? name : "",
+    imageUrl: typeof imageUrl === "string" ? imageUrl : "",
+  };
+};
+
+type BoardSession =
+  | { status: "signed-in"; user: AuthUser }
+  | { status: "signed-out" }
+  | { status: "unavailable" };
+
+/**
+ * Asks the Ever Teams deployment at `everTeamsOrigin` who is signed in. The
+ * browser sends that deployment's own session cookies along; no token
+ * reaches the Board. 200 means signed in, 401 signed out; anything else
+ * (404 from a deployment without the route, 403, 503, a network or CORS
+ * failure) means the session could not be checked.
+ */
+const fetchBoardSession = async (
+  everTeamsOrigin: string,
+): Promise<BoardSession> => {
+  try {
+    const res = await fetch(`${everTeamsOrigin}/api/board/session`, {
+      credentials: "include",
+    });
+    if (res.status === 401) {
+      return { status: "signed-out" };
+    }
+    const user = res.ok ? toAuthUser(await res.json()) : null;
+    if (user) {
+      return { status: "signed-in", user };
+    }
+    console.warn(
+      `Board session check at ${everTeamsOrigin} answered ${res.status}, trying the ${TOKEN_COOKIE_NAME} cookie`,
+    );
+  } catch (error) {
+    console.warn(
+      `Board session check at ${everTeamsOrigin} failed, trying the ${TOKEN_COOKIE_NAME} cookie`,
+      error,
+    );
+  }
+  return { status: "unavailable" };
+};
+
+/**
+ * Check used before /api/board/session existed, kept for Ever Teams
+ * deployments that do not serve it yet: the `auth-token` cookie, when the
+ * Board can read it, is checked against the Gauzy API.
+ */
+const fetchLegacyAuthUser = async (): Promise<AuthUser | null> => {
+  const gauzyApiUrl = import.meta.env.VITE_APP_GAUZY_API_URL;
+  try {
+    const access_token = getAccessTokenCookie();
+    if (!gauzyApiUrl || !access_token) {
+      return null;
+    }
+    const res = await fetch(`${gauzyApiUrl}/user/me`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+    return res.ok ? toAuthUser(await res.json()) : null;
+  } catch (error) {
+    console.warn(`${TOKEN_COOKIE_NAME} cookie check failed`, error);
+    return null;
+  }
+};
+
+const authenticate = async (
+  everTeamsOrigin: string | null,
+): Promise<AuthUser | null> => {
+  if (everTeamsOrigin) {
+    const session = await fetchBoardSession(everTeamsOrigin);
+    if (session.status === "signed-in") {
+      return session.user;
+    }
+    if (session.status === "signed-out") {
+      return null;
+    }
+  }
+  return fetchLegacyAuthUser();
 };
 
 export function Authenticator(props: PropsWithChildren) {
   //  return <>{props.children}</>;
   const setAuthUser = useSetAtom(authUserAtom);
+  // The Ever Teams deployment of this visit, see everTeamsOrigin.ts
+  const [everTeamsOrigin] = useState(getEverTeamsOrigin);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const access_token = getAccessTokenCookie();
-    if (!access_token) {
-      setAuthenticated(false);
-      return;
-    }
+    let cancelled = false;
 
-    fetchAuthUser(access_token)
-      .then((user) => {
-        setAuthUser(user);
-        setAuthenticated(true);
-      })
-      .catch(() => setAuthenticated(false));
-  }, [setAuthUser]);
+    authenticate(everTeamsOrigin).then((user) => {
+      if (cancelled) {
+        return;
+      }
+      setAuthUser(user);
+      setAuthenticated(user !== null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [everTeamsOrigin, setAuthUser]);
 
   return (
     <>
@@ -58,7 +144,9 @@ export function Authenticator(props: PropsWithChildren) {
           Loading...
         </div>
       )}
-      {authenticated === false && <UnauthorizedMessage />}
+      {authenticated === false && (
+        <UnauthorizedMessage everTeamsOrigin={everTeamsOrigin} />
+      )}
       {authenticated && (
         <>
           <EverTeamsLogo
@@ -77,19 +165,25 @@ export function Authenticator(props: PropsWithChildren) {
   );
 }
 
-function UnauthorizedMessage() {
+function UnauthorizedMessage({
+  everTeamsOrigin,
+}: {
+  everTeamsOrigin: string | null;
+}) {
   return (
     <div style={style}>
       <div>Access denied</div>
 
-      <a
-        href={`${EVER_TEAMS_URL}/auth/passcode?redirect=${encodeURIComponent(
-          location.href,
-        )}`}
-        style={{ marginTop: "1rem", color: "#6755c9" }}
-      >
-        Login
-      </a>
+      {everTeamsOrigin && (
+        <a
+          href={`${everTeamsOrigin}/auth/passcode?redirect=${encodeURIComponent(
+            location.href,
+          )}`}
+          style={{ marginTop: "1rem", color: "#6755c9" }}
+        >
+          Login
+        </a>
+      )}
     </div>
   );
 }
@@ -163,26 +257,9 @@ function range(start: number, end?: number, step = 1): number[] {
   return result;
 }
 
+/** What the Board needs to know about the signed-in person. */
 export interface AuthUser {
   id: string;
-  createdAt: string;
-  updatedAt: string;
-  tenantId: string;
-  thirdPartyId: any;
-  firstName: string;
-  lastName: any;
-  email: string;
-  phoneNumber: any;
-  username: any;
-  timeZone: any;
-  imageUrl: string;
-  preferredLanguage: string;
-  preferredComponentLayout: string;
-  isActive: boolean;
-  roleId: string;
-  imageId: any;
-  image: any;
   name: string;
-  employeeId: any;
-  isEmailVerified: boolean;
+  imageUrl: string;
 }
