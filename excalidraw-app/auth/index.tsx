@@ -1,7 +1,7 @@
-import { atom, useSetAtom } from "jotai";
+import { atom, useAtomValue, useSetAtom } from "jotai";
 import { CSSProperties, PropsWithChildren, useEffect, useState } from "react";
 import { EverTeamsLogo } from "../components/ever-teams-logo";
-import { getEverTeamsOrigin } from "./everTeamsOrigin";
+import { everTeamsOriginAtom } from "./everTeamsOrigin";
 
 const TOKEN_COOKIE_NAME = "auth-token";
 const style = {
@@ -113,7 +113,7 @@ export function Authenticator(props: PropsWithChildren) {
   //  return <>{props.children}</>;
   const setAuthUser = useSetAtom(authUserAtom);
   // The Ever Teams deployment of this visit, see everTeamsOrigin.ts
-  const [everTeamsOrigin] = useState(getEverTeamsOrigin);
+  const everTeamsOrigin = useAtomValue(everTeamsOriginAtom);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {

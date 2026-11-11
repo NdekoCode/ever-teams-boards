@@ -1,3 +1,5 @@
+import { atom } from "jotai";
+import { appJotaiStore } from "../app-jotai";
 import { STORAGE_KEYS } from "../app_constants";
 
 /**
@@ -164,3 +166,39 @@ export const getEverTeamsOrigin = (): string | null => {
     ),
   );
 };
+
+/**
+ * The Ever Teams origin of this visit, for everything that needs it: the
+ * session check, the sign-in link, links back to Ever Teams and shareable
+ * Board addresses. A store chooses it once, on the first read, which the
+ * Authenticator makes before the app rewrites the address.
+ */
+export const everTeamsOriginAtom = atom<string | null>(() =>
+  getEverTeamsOrigin(),
+);
+
+/**
+ * Sets the `origin` parameter of a Board address to `everTeamsOrigin`, or
+ * removes it when there is none, so an `origin` copied from the current
+ * address is never passed on as is.
+ */
+export const withEverTeamsOrigin = (
+  boardUrl: string,
+  everTeamsOrigin: string | null,
+): string => {
+  const url = new URL(boardUrl);
+  if (everTeamsOrigin) {
+    url.searchParams.set(EVER_TEAMS_ORIGIN_PARAM, everTeamsOrigin);
+  } else if (url.searchParams.has(EVER_TEAMS_ORIGIN_PARAM)) {
+    url.searchParams.delete(EVER_TEAMS_ORIGIN_PARAM);
+  }
+  return url.toString();
+};
+
+/**
+ * A shareable Board address carrying the Ever Teams origin of this visit, so
+ * whoever opens it signs in on the same deployment. Only that origin, which
+ * is always an allowed one, is ever written.
+ */
+export const toShareableBoardUrl = (boardUrl: string): string =>
+  withEverTeamsOrigin(boardUrl, appJotaiStore.get(everTeamsOriginAtom) ?? null);

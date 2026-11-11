@@ -71,6 +71,7 @@ import { resetBrowserStateVersions } from "../data/tabSync";
 import { LocalData } from "../data/LocalData";
 import { atom, useAtom } from "jotai";
 import { appJotaiStore } from "../app-jotai";
+import { toShareableBoardUrl } from "../auth/everTeamsOrigin";
 
 export const collabAPIAtom = atom<CollabAPI | null>(null);
 export const collabDialogShownAtom = atom(false);
@@ -563,7 +564,7 @@ class Collab extends PureComponent<Props, CollabState> {
     this.initializeIdleDetector();
 
     this.setState({
-      activeRoomLink: window.location.href,
+      activeRoomLink: toShareableBoardUrl(window.location.href),
     });
 
     return scenePromise;
