@@ -12,6 +12,7 @@ The Board lets in the people signed in to the Ever Teams deployment they came fr
    - `200` with `{ id, name, imageUrl }`: signed in.
    - `401`: not signed in. The Board shows "Access denied" with a Login link to `<origin>/auth/passcode?redirect=<Board address>`, which brings the person back to the Board once signed in.
    - Anything else (`404` from a deployment without this route, `403`, `503`, a network or CORS error): the Board falls back to the legacy check, the `auth-token` cookie (when the Board can read it) checked against `VITE_APP_GAUZY_API_URL`, and shows "Access denied" when that fails too.
+4. The origin chosen for the visit is used everywhere else too. The links the Board creates (room links, scene links, the link in the share dialog) carry it as `origin`, so a collaborator who never opened the Board signs in on the same deployment, and any `origin` copied from the current address is replaced. The Ever Teams logo and the "Ever Teams" menu item lead back to it.
 
 Build settings (`.env.production`, `.env.development`):
 
