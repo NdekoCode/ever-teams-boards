@@ -34,6 +34,7 @@ import {
   FILE_UPLOAD_MAX_BYTES,
   ROOM_ID_BYTES,
 } from "../app_constants";
+import { toShareableBoardUrl } from "../auth/everTeamsOrigin";
 
 import { encodeFilesForUpload } from "./FileManager";
 import { saveFilesToFirebase } from "./firebase";
@@ -162,7 +163,9 @@ export const getCollaborationLink = (data: {
   roomId: string;
   roomKey: string;
 }) => {
-  return `${window.location.origin}${window.location.pathname}#room=${data.roomId},${data.roomKey}`;
+  return toShareableBoardUrl(
+    `${window.location.origin}${window.location.pathname}#room=${data.roomId},${data.roomKey}`,
+  );
 };
 
 /**
@@ -285,7 +288,7 @@ export const exportToBackend = async (
       // We need to store the key (and less importantly the id) as hash instead
       // of queryParam in order to never send it to the server
       url.hash = `json=${json.id},${encryptionKey}`;
-      const urlString = url.toString();
+      const urlString = toShareableBoardUrl(url.toString());
 
       await saveFilesToFirebase({
         prefix: `/files/shareLinks/${json.id}`,

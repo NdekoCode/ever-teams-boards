@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { atom, useSetAtom } from "../app-jotai";
+import { atom, useAtomValue, useSetAtom } from "../app-jotai";
 import { EverTeamsLogo } from "../components/ever-teams-logo";
 
-import { getEverTeamsOrigin } from "./everTeamsOrigin";
+import { everTeamsOriginAtom } from "./everTeamsOrigin";
 
 import type { CSSProperties, PropsWithChildren } from "react";
 
@@ -117,7 +117,7 @@ export function Authenticator(props: PropsWithChildren) {
   //  return <>{props.children}</>;
   const setAuthUser = useSetAtom(authUserAtom);
   // The Ever Teams deployment of this visit, see everTeamsOrigin.ts
-  const [everTeamsOrigin] = useState(getEverTeamsOrigin);
+  const everTeamsOrigin = useAtomValue(everTeamsOriginAtom);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {

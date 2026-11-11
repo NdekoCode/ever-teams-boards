@@ -1,10 +1,14 @@
+// eslint-disable-next-line no-restricted-imports
+import { createStore } from "jotai";
 import { vi } from "vitest";
 
 import { STORAGE_KEYS } from "../app_constants";
 
 import {
+  everTeamsOriginAtom,
   getEverTeamsOriginConfig,
   resolveEverTeamsOrigin,
+  withEverTeamsOrigin,
 } from "../auth/everTeamsOrigin";
 
 import type { EverTeamsOriginConfig } from "../auth/everTeamsOrigin";
@@ -263,5 +267,93 @@ describe("resolveEverTeamsOrigin", () => {
         getEverTeamsOriginConfig(undefined, undefined, false),
       ),
     ).toBeNull();
+  });
+});
+
+describe("everTeamsOriginAtom", () => {
+  const visitBoard = (search: string) => {
+    window.history.replaceState(null, "", `/${search}`);
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_APP_EVER_TEAMS_URL", EVER_TEAMS_URL);
+    vi.stubEnv("VITE_APP_EVER_TEAMS_ORIGINS", EVER_TEAMS_ORIGINS);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    localStorage.clear();
+    visitBoard("");
+  });
+
+  it("holds the Ever Teams origin chosen for the visit", () => {
+    visitBoard(boardSearch("https://demo.ever.team"));
+
+    expect(createStore().get(everTeamsOriginAtom)).toBe(
+      "https://demo.ever.team",
+    );
+  });
+
+  it("never holds an origin that is not allowed", () => {
+    visitBoard(boardSearch("https://evil.example"));
+
+    expect(createStore().get(everTeamsOriginAtom)).toBe(
+      "https://app.ever.team",
+    );
+  });
+
+  it("is chosen once per store, so later address changes do not move it", () => {
+    visitBoard(boardSearch("https://demo.ever.team"));
+    const store = createStore();
+    expect(store.get(everTeamsOriginAtom)).toBe("https://demo.ever.team");
+
+    // the app rewrites the address, and another tab remembers stage
+    visitBoard("");
+    localStorage.setItem(REMEMBERED_ORIGIN_KEY, "https://stage.ever.team");
+
+    expect(store.get(everTeamsOriginAtom)).toBe("https://demo.ever.team");
+    expect(createStore().get(everTeamsOriginAtom)).toBe(
+      "https://stage.ever.team",
+    );
+  });
+});
+
+describe("withEverTeamsOrigin", () => {
+  it("adds the origin to a room link, before the room hash", () => {
+    expect(
+      withEverTeamsOrigin(
+        "https://board.ever.team/#room=room-id,room-key",
+        "https://demo.ever.team",
+      ),
+    ).toBe(
+      "https://board.ever.team/?origin=https%3A%2F%2Fdemo.ever.team#room=room-id,room-key",
+    );
+  });
+
+  it("replaces an origin the address already carries and keeps the rest", () => {
+    expect(
+      withEverTeamsOrigin(
+        "https://board.ever.team/?live=true&origin=https%3A%2F%2Fevil.example#json=scene-id,scene-key",
+        "https://stage.ever.team",
+      ),
+    ).toBe(
+      "https://board.ever.team/?live=true&origin=https%3A%2F%2Fstage.ever.team#json=scene-id,scene-key",
+    );
+  });
+
+  it("removes the origin parameter when the visit has no origin", () => {
+    expect(
+      withEverTeamsOrigin(
+        "https://board.ever.team/?origin=https%3A%2F%2Fevil.example&live=true#room=room-id,room-key",
+        null,
+      ),
+    ).toBe("https://board.ever.team/?live=true#room=room-id,room-key");
+    expect(
+      withEverTeamsOrigin(
+        "https://board.ever.team/#room=room-id,room-key",
+        null,
+      ),
+    ).toBe("https://board.ever.team/#room=room-id,room-key");
   });
 });
