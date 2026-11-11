@@ -1,5 +1,5 @@
-import clsx from "clsx";
-import { EVER_TEAMS_URL } from "../app_constants";
+import { useAtomValue } from "jotai";
+import { everTeamsOriginAtom } from "../auth/everTeamsOrigin";
 
 type Props = {
   className?: string;
@@ -7,9 +7,11 @@ type Props = {
 };
 
 export function EverTeamsLogo({ className, style }: Props) {
+  // Back to the Ever Teams deployment of this visit
+  const everTeamsOrigin = useAtomValue(everTeamsOriginAtom);
   return (
     <a
-      href={EVER_TEAMS_URL}
+      href={everTeamsOrigin ?? undefined}
       style={{
         filter: "brightness(0) invert(1)",
         ...style,

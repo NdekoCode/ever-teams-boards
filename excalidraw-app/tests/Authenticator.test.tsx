@@ -106,6 +106,34 @@ describe("Authenticator", () => {
     expect(
       localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_EVER_TEAMS_ORIGIN),
     ).toBe(DEMO_ORIGIN);
+    // the Ever Teams logo leads back to that deployment
+    expect(screen.getByRole("link")).toHaveAttribute("href", DEMO_ORIGIN);
+  });
+
+  it("links the logo to the default origin when the visit names one that is not allowed", async () => {
+    visitBoard(`?origin=${encodeURIComponent("https://evil.example")}`);
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { id: "user-1", name: "Ada Lovelace" }),
+    );
+
+    renderBoard();
+
+    await screen.findByTestId("signed-in-user");
+    expect(screen.getByRole("link")).toHaveAttribute("href", APP_ORIGIN);
+  });
+
+  it("leaves the logo without a link when no Ever Teams origin is configured", async () => {
+    vi.stubEnv("VITE_APP_EVER_TEAMS_URL", "");
+    vi.stubEnv("VITE_APP_EVER_TEAMS_ORIGINS", "");
+    setCookie("auth-token", "legacy-token");
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { id: "user-1", name: "Ada Lovelace" }),
+    );
+
+    renderBoard();
+
+    await screen.findByTestId("signed-in-user");
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("denies access on 401 and links to the sign-in page of that origin", async () => {

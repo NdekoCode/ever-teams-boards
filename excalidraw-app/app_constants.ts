@@ -44,8 +44,6 @@ export const COOKIES = {
   AUTH_STATE_COOKIE: "excplus-auth",
 } as const;
 
-export const EVER_TEAMS_URL = import.meta.env.VITE_APP_EVER_TEAMS_URL;
-
 export const isExcalidrawPlusSignedUser = document.cookie.includes(
   COOKIES.AUTH_STATE_COOKIE,
 );
