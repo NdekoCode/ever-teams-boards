@@ -1,28 +1,30 @@
-import {
-  isSyncableElement,
+import { CaptureUpdateAction } from "@excalidraw/excalidraw";
+import { trackEvent } from "@excalidraw/excalidraw/analytics";
+import { encryptData } from "@excalidraw/excalidraw/data/encryption";
+import { newElementWith } from "@excalidraw/element";
+import throttle from "lodash.throttle";
+
+import type { UserIdleState } from "@excalidraw/common";
+import type { OrderedExcalidrawElement } from "@excalidraw/element/types";
+import type {
+  OnUserFollowedPayload,
+  SocketId,
+} from "@excalidraw/excalidraw/types";
+
+import { WS_EVENTS, FILE_UPLOAD_TIMEOUT, WS_SUBTYPES } from "../app_constants";
+import { isSyncableElement } from "../data";
+
+import type {
   SocketUpdateData,
   SocketUpdateDataSource,
+  SyncableExcalidrawElement,
 } from "../data";
-
-import { TCollabClass } from "./Collab";
-
-import { ExcalidrawElement } from "../../src/element/types";
-import {
-  WS_EVENTS,
-  FILE_UPLOAD_TIMEOUT,
-  WS_SCENE_EVENT_TYPES,
-} from "../app_constants";
-import { UserIdleState } from "../../src/types";
-import { trackEvent } from "../../src/analytics";
-import throttle from "lodash.throttle";
-import { newElementWith } from "../../src/element/mutateElement";
-import { BroadcastedExcalidrawElement } from "./reconciliation";
-import { encryptData } from "../../src/data/encryption";
-import { PRECEDING_ELEMENT_KEY } from "../../src/constants";
+import type { TCollabClass } from "./Collab";
+import type { Socket } from "socket.io-client";
 
 class Portal {
   collab: TCollabClass;
-  socket: SocketIOClient.Socket | null = null;
+  socket: Socket | null = null;
   socketInitialized: boolean = false; // we don't want the socket to emit any updates until it is fully initialized
   roomId: string | null = null;
   roomKey: string | null = null;
@@ -32,7 +34,7 @@ class Portal {
     this.collab = collab;
   }
 
-  open(socket: SocketIOClient.Socket, id: string, key: string) {
+  open(socket: Socket, id: string, key: string) {
     this.socket = socket;
     this.roomId = id;
     this.roomKey = key;
@@ -46,12 +48,12 @@ class Portal {
     });
     this.socket.on("new-user", async (_socketId: string) => {
       this.broadcastScene(
-        WS_SCENE_EVENT_TYPES.INIT,
+        WS_SUBTYPES.INIT,
         this.collab.getSceneElementsIncludingDeleted(),
         /* syncAll */ true,
       );
     });
-    this.socket.on("room-user-change", (clients: string[]) => {
+    this.socket.on("room-user-change", (clients: SocketId[]) => {
       this.collab.setCollaborators(clients);
     });
 
@@ -83,6 +85,7 @@ class Portal {
   async _broadcastSocketData(
     data: SocketUpdateData,
     volatile: boolean = false,
+    roomId?: string,
   ) {
     if (this.isOpen()) {
       const json = JSON.stringify(data);
@@ -91,7 +94,7 @@ class Portal {
 
       this.socket?.emit(
         volatile ? WS_EVENTS.SERVER_VOLATILE : WS_EVENTS.SERVER,
-        this.roomId,
+        roomId ?? this.roomId,
         encryptedBuffer,
         iv,
       );
@@ -114,52 +117,51 @@ class Portal {
       }
     }
 
-    this.collab.excalidrawAPI.updateScene({
-      elements: this.collab.excalidrawAPI
-        .getSceneElementsIncludingDeleted()
-        .map((element) => {
-          if (this.collab.fileManager.shouldUpdateImageElementStatus(element)) {
-            // this will signal collaborators to pull image data from server
-            // (using mutation instead of newElementWith otherwise it'd break
-            // in-progress dragging)
-            return newElementWith(element, { status: "saved" });
-          }
-          return element;
-        }),
-    });
+    let isChanged = false;
+    const newElements = this.collab.excalidrawAPI
+      .getSceneElementsIncludingDeleted()
+      .map((element) => {
+        if (this.collab.fileManager.shouldUpdateImageElementStatus(element)) {
+          isChanged = true;
+          // this will signal collaborators to pull image data from server
+          // (using mutation instead of newElementWith otherwise it'd break
+          // in-progress dragging)
+          return newElementWith(element, { status: "saved" });
+        }
+        return element;
+      });
+
+    if (isChanged) {
+      this.collab.excalidrawAPI.updateScene({
+        elements: newElements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+    }
   }, FILE_UPLOAD_TIMEOUT);
 
   broadcastScene = async (
-    updateType: WS_SCENE_EVENT_TYPES.INIT | WS_SCENE_EVENT_TYPES.UPDATE,
-    allElements: readonly ExcalidrawElement[],
+    updateType: WS_SUBTYPES.INIT | WS_SUBTYPES.UPDATE,
+    elements: readonly OrderedExcalidrawElement[],
     syncAll: boolean,
   ) => {
-    if (updateType === WS_SCENE_EVENT_TYPES.INIT && !syncAll) {
+    if (updateType === WS_SUBTYPES.INIT && !syncAll) {
       throw new Error("syncAll must be true when sending SCENE.INIT");
     }
 
     // sync out only the elements we think we need to to save bandwidth.
     // periodically we'll resync the whole thing to make sure no one diverges
     // due to a dropped message (server goes down etc).
-    const syncableElements = allElements.reduce(
-      (acc, element: BroadcastedExcalidrawElement, idx, elements) => {
-        if (
-          (syncAll ||
-            !this.broadcastedElementVersions.has(element.id) ||
-            element.version >
-              this.broadcastedElementVersions.get(element.id)!) &&
-          isSyncableElement(element)
-        ) {
-          acc.push({
-            ...element,
-            // z-index info for the reconciler
-            [PRECEDING_ELEMENT_KEY]: idx === 0 ? "^" : elements[idx - 1]?.id,
-          });
-        }
-        return acc;
-      },
-      [] as BroadcastedExcalidrawElement[],
-    );
+    const syncableElements = elements.reduce((acc, element) => {
+      if (
+        (syncAll ||
+          !this.broadcastedElementVersions.has(element.id) ||
+          element.version > this.broadcastedElementVersions.get(element.id)!) &&
+        isSyncableElement(element)
+      ) {
+        acc.push(element);
+      }
+      return acc;
+    }, [] as SyncableExcalidrawElement[]);
 
     const data: SocketUpdateDataSource[typeof updateType] = {
       type: updateType,
@@ -183,9 +185,9 @@ class Portal {
   broadcastIdleChange = (userState: UserIdleState) => {
     if (this.socket?.id) {
       const data: SocketUpdateDataSource["IDLE_STATUS"] = {
-        type: "IDLE_STATUS",
+        type: WS_SUBTYPES.IDLE_STATUS,
         payload: {
-          socketId: this.socket.id,
+          socketId: this.socket.id as SocketId,
           userState,
           username: this.collab.state.username,
           avatar: this.collab.state.avatar,
@@ -204,9 +206,9 @@ class Portal {
   }) => {
     if (this.socket?.id) {
       const data: SocketUpdateDataSource["MOUSE_LOCATION"] = {
-        type: "MOUSE_LOCATION",
+        type: WS_SUBTYPES.MOUSE_LOCATION,
         payload: {
-          socketId: this.socket.id,
+          socketId: this.socket.id as SocketId,
           pointer: payload.pointer,
           button: payload.button || "up",
           selectedElementIds:
@@ -215,10 +217,41 @@ class Portal {
           avatar: this.collab.state.avatar,
         },
       };
+
       return this._broadcastSocketData(
         data as SocketUpdateData,
         true, // volatile
       );
+    }
+  };
+
+  broadcastVisibleSceneBounds = (
+    payload: {
+      sceneBounds: SocketUpdateDataSource["USER_VISIBLE_SCENE_BOUNDS"]["payload"]["sceneBounds"];
+    },
+    roomId: string,
+  ) => {
+    if (this.socket?.id) {
+      const data: SocketUpdateDataSource["USER_VISIBLE_SCENE_BOUNDS"] = {
+        type: WS_SUBTYPES.USER_VISIBLE_SCENE_BOUNDS,
+        payload: {
+          socketId: this.socket.id as SocketId,
+          username: this.collab.state.username,
+          sceneBounds: payload.sceneBounds,
+        },
+      };
+
+      return this._broadcastSocketData(
+        data as SocketUpdateData,
+        true, // volatile
+        roomId,
+      );
+    }
+  };
+
+  broadcastUserFollowed = (payload: OnUserFollowedPayload) => {
+    if (this.socket?.id) {
+      this.socket.emit(WS_EVENTS.USER_FOLLOW_CHANGE, payload);
     }
   };
 }

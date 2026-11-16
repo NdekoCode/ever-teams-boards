@@ -1,6 +1,6 @@
 # Keep the build context lean but DO NOT deny-all: the Vite build needs
-# index.html, vite.config.ts, tsconfig*.json, src/, excalidraw-app/, public/,
-# scripts/, .env.* — so we only exclude heavy/irrelevant paths here.
+# excalidraw-app/, packages/, public/, scripts/, tsconfig.json, .env.* and
+# every workspace package.json, so we only exclude heavy/irrelevant paths here.
 node_modules
 **/node_modules
 .git
@@ -11,3 +11,7 @@ coverage
 firebase-project
 dev-docs
 .codesandbox
+
+# nested build output, e.g. packages/excalidraw/{dist,node_modules}
+**/build
+**/dist

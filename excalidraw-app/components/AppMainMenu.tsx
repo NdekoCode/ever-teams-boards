@@ -1,13 +1,22 @@
+import { eyeIcon, LinkIcon } from "@excalidraw/excalidraw/components/icons";
+import { MainMenu } from "@excalidraw/excalidraw/index";
 import React from "react";
-import { LinkIcon } from "../../src/components/icons";
-import { MainMenu } from "../../src/packages/excalidraw/index";
-import { LanguageList } from "./LanguageList";
+
+import { isDevEnv } from "@excalidraw/common";
+
+import type { Theme } from "@excalidraw/element/types";
+
+import { LanguageList } from "../app-language/LanguageList";
 import { EVER_TEAMS_URL } from "../app_constants";
 
+import { saveDebugState } from "./DebugCanvas";
+
 export const AppMainMenu: React.FC<{
-  setCollabDialogShown: (toggle: boolean) => any;
+  onCollabDialogOpen: () => any;
   isCollaborating: boolean;
   isCollabEnabled: boolean;
+  theme: Theme | "system";
+  refresh: () => void;
 }> = React.memo((props) => {
   return (
     <MainMenu>
@@ -18,17 +27,37 @@ export const AppMainMenu: React.FC<{
       {props.isCollabEnabled && (
         <MainMenu.DefaultItems.LiveCollaborationTrigger
           isCollaborating={props.isCollaborating}
-          onSelect={() => props.setCollabDialogShown(true)}
+          onSelect={() => props.onCollabDialogOpen()}
         />
       )}
-
+      <MainMenu.DefaultItems.CommandPalette className="highlighted" />
+      <MainMenu.DefaultItems.SearchMenu />
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
       <MainMenu.ItemLink icon={LinkIcon} target="_self" href={EVER_TEAMS_URL}>
         Ever Teams
       </MainMenu.ItemLink>
-      <MainMenu.DefaultItems.ToggleTheme />
+      {isDevEnv() && (
+        <MainMenu.Item
+          icon={eyeIcon}
+          onSelect={() => {
+            if (window.visualDebug) {
+              delete window.visualDebug;
+              saveDebugState({ enabled: false });
+            } else {
+              window.visualDebug = { data: [] };
+              saveDebugState({ enabled: true });
+            }
+            props?.refresh();
+          }}
+        >
+          Visual Debug
+        </MainMenu.Item>
+      )}
+      <MainMenu.Separator />
+      <MainMenu.DefaultItems.Preferences />
+      <MainMenu.DefaultItems.ToggleTheme allowSystemTheme theme={props.theme} />
       <MainMenu.ItemCustom>
         <LanguageList style={{ width: "100%" }} />
       </MainMenu.ItemCustom>
