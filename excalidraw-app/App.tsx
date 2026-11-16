@@ -139,8 +139,6 @@ import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 
 import "./index.scss";
 
-import { AppSidebar } from "./components/AppSidebar";
-
 import { Authenticator, authUserAtom } from "./auth";
 
 import type { CollabAPI } from "./collab/Collab";
@@ -1051,8 +1049,6 @@ const ExcalidrawWrapper = () => {
             }
           }}
         />
-
-        <AppSidebar />
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
