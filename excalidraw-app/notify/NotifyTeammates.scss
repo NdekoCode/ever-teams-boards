@@ -1,0 +1,222 @@
+@import "../../packages/excalidraw/css/variables.module.scss";
+
+.excalidraw {
+  --NotifyTeammates--success: var(--color-success);
+
+  &.theme--dark {
+    --NotifyTeammates--success: #{$oc-green-4};
+  }
+
+  .NotifyTeammates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    border-top: 1px solid var(--color-gray-20);
+    padding-top: 0.75rem;
+
+    font-family: "Assistant";
+    color: var(--text-primary-color);
+
+    &__toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.25rem 0;
+      margin: 0;
+
+      border: none;
+      background: none;
+      color: var(--color-primary);
+
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-align: start;
+
+      &:hover {
+        color: var(--color-primary-darker);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--focus-highlight-color);
+        outline-offset: 2px;
+        border-radius: var(--border-radius-md);
+      }
+    }
+
+    &__toggleIcon {
+      display: flex;
+      width: 1.25rem;
+      height: 1.25rem;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    &__chevron {
+      margin-inline-start: auto;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translateY(-25%) rotate(45deg);
+      transition: transform 150ms ease-out;
+
+      &--open {
+        transform: translateY(25%) rotate(-135deg);
+      }
+    }
+
+    &__panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    &__intro,
+    &__message,
+    &__count,
+    &__hint {
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 150%;
+    }
+
+    &__hint,
+    &__count {
+      font-size: 0.75rem;
+      color: var(--color-gray-60);
+    }
+
+    &__message--error {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem;
+      color: var(--color-danger);
+    }
+
+    &__members {
+      list-style: none;
+      margin: 0;
+      padding: 0.25rem;
+      max-height: 11rem;
+      overflow-y: auto;
+
+      border: 1px solid var(--ExcTextField--border);
+      border-radius: 0.5rem;
+    }
+
+    &__member {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.375rem 0.5rem;
+      border-radius: var(--border-radius-md);
+      cursor: pointer;
+
+      font-size: 0.875rem;
+
+      &:hover {
+        background-color: var(--button-hover-bg);
+      }
+
+      &--checked {
+        background-color: var(--color-primary-light);
+
+        &:hover {
+          background-color: var(--color-primary-light-darker);
+        }
+      }
+
+      &:focus-within {
+        outline: 2px solid var(--focus-highlight-color);
+        outline-offset: -2px;
+      }
+    }
+
+    &__memberName {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    input[type="checkbox"] {
+      flex: 0 0 auto;
+      width: 1rem;
+      height: 1rem;
+      margin: 0;
+      accent-color: var(--color-primary);
+      cursor: pointer;
+
+      &:disabled {
+        cursor: not-allowed;
+      }
+    }
+
+    &__includeLink {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+
+      .NotifyTeammates__hint {
+        padding-inline-start: 1.75rem;
+      }
+    }
+
+    &__actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    &__outcome {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      line-height: 150%;
+
+      // it takes the focus after Notify, but is no control
+      &:focus {
+        outline: none;
+      }
+
+      &--success {
+        color: var(--NotifyTeammates--success);
+      }
+
+      &--error {
+        color: var(--color-danger);
+      }
+    }
+
+    &__link,
+    &__signIn {
+      padding: 0;
+      border: none;
+      background: none;
+
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: 600;
+      color: var(--link-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  }
+}
