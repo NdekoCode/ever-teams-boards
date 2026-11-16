@@ -1,7 +1,10 @@
-import { atom, useSetAtom } from "jotai";
-import { CSSProperties, PropsWithChildren, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+
+import { atom, useSetAtom } from "../app-jotai";
 import { EverTeamsLogo } from "../components/ever-teams-logo";
 import { EVER_TEAMS_URL } from "../app_constants";
+
+import type { CSSProperties, PropsWithChildren } from "react";
 
 const GAUZY_API_URL = import.meta.env.VITE_APP_GAUZY_API_URL;
 const TOKEN_COOKIE_NAME = "auth-token";

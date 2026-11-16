@@ -1,4 +1,3 @@
-import clsx from "clsx";
 import { EVER_TEAMS_URL } from "../app_constants";
 
 type Props = {
