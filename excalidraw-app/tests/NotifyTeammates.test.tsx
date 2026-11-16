@@ -7,6 +7,7 @@ import {
 } from "@excalidraw/excalidraw/editor-jotai";
 
 import { Provider } from "../app-jotai";
+import { ActiveRoomDialog } from "../share/ShareDialog";
 
 import {
   getMemberImageUrl,
@@ -16,6 +17,7 @@ import {
 import { NotifyTeammates } from "../notify/NotifyTeammates";
 
 import type { BoardMember } from "../notify/boardNotify";
+import type { CollabAPI } from "../collab/Collab";
 
 const APP_ORIGIN = "https://app.ever.team";
 const DEMO_ORIGIN = "https://demo.ever.team";
@@ -440,6 +442,70 @@ describe("NotifyTeammates", () => {
     } finally {
       document.removeEventListener("keydown", onDocumentKeyDown);
     }
+  });
+});
+
+describe("the live collaboration dialog", () => {
+  const collabAPI = {
+    getUsername: () => "Ada",
+    setUsername: () => {},
+    setCollabError: () => {},
+    stopCollaboration: () => {},
+    isCollaborating: () => true,
+  } as unknown as CollabAPI;
+
+  const renderRoomModal = (activeRoomLink: string) =>
+    render(
+      <EditorJotaiProvider store={editorJotaiStore}>
+        <Provider>
+          <ActiveRoomDialog
+            collabAPI={collabAPI}
+            activeRoomLink={activeRoomLink}
+            boardName="Retro"
+            handleClose={() => {}}
+          />
+        </Provider>
+      </EditorJotaiProvider>,
+    );
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_APP_EVER_TEAMS_URL", APP_ORIGIN);
+    vi.stubEnv("VITE_APP_EVER_TEAMS_ORIGINS", APP_ORIGIN);
+    vi.stubGlobal("fetch", fetchMock);
+    localStorage.clear();
+    fetchMock.mockResolvedValue(jsonResponse(201, { notified: 1 }));
+  });
+
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it("offers to notify teammates about the active room", async () => {
+    fetchMock.mockImplementation((input) =>
+      Promise.resolve(
+        String(input).endsWith("/members")
+          ? jsonResponse(200, { items: [ADA] })
+          : jsonResponse(201, { notified: 1 }),
+      ),
+    );
+    renderRoomModal(ROOM_LINK);
+
+    await openPart();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Ada Lovelace/ }));
+    fireEvent.click(notifyButton());
+
+    await screen.findByText("Notified 1 teammate");
+    expect(notifyCalls()[0][0]).toBe(`${APP_ORIGIN}/api/board/notify`);
+    expect(postedBody()).toEqual({
+      kind: "share",
+      receiverEmployeeIds: [ADA.employeeId],
+      roomId: ROOM_ID,
+      boardName: "Retro",
+      link: BOARD_URL,
+    });
   });
 });
 

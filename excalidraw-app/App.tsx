@@ -147,6 +147,7 @@ import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanne
 import { AppSidebar } from "./components/AppSidebar";
 
 import { Authenticator, authUserAtom } from "./auth";
+import { NotifyTeammates } from "./notify/NotifyTeammates";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -1095,7 +1096,12 @@ const ExcalidrawWrapper = () => {
             link={latestShareableLink}
             onCloseRequest={() => setLatestShareableLink(null)}
             setErrorMessage={setErrorMessage}
-          />
+          >
+            <NotifyTeammates
+              boardLink={latestShareableLink}
+              boardName={excalidrawAPI?.getAppState().name}
+            />
+          </ShareableLinkDialog>
         )}
         {excalidrawAPI && !isCollabDisabled && (
           <Collab excalidrawAPI={excalidrawAPI} />

@@ -11,17 +11,22 @@ import { copyIcon } from "./icons";
 
 import "./ShareableLinkDialog.scss";
 
+import type { ReactNode } from "react";
+
 export type ShareableLinkDialogProps = {
   link: string;
 
   onCloseRequest: () => void;
   setErrorMessage: (error: string) => void;
+  /** Rendered below the link, for what the host app offers to do with it. */
+  children?: ReactNode;
 };
 
 export const ShareableLinkDialog = ({
   link,
   onCloseRequest,
   setErrorMessage,
+  children,
 }: ShareableLinkDialogProps) => {
   const { t } = useI18n();
   const [, setJustCopied] = useState(false);
@@ -71,6 +76,7 @@ export const ShareableLinkDialog = ({
             }}
           />
         </div>
+        {children}
         <div className="ShareableLinkDialog__description">
           🔒 {t("alerts.uploadedSecurly")}
         </div>
