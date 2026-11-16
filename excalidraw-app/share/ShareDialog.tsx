@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { atom, useAtom, useAtomValue } from "../app-jotai";
 import { activeRoomLinkAtom } from "../collab/Collab";
+import { NotifyTeammates } from "../notify/NotifyTeammates";
 
 import "./ShareDialog.scss";
 import { QRCode } from "./QRCode";
@@ -52,15 +53,19 @@ export type ShareDialogProps = {
   handleClose: () => void;
   onExportToBackend: OnExportToBackend;
   type: ShareDialogType;
+  boardName?: string | null;
 };
 
-const ActiveRoomDialog = ({
+export const ActiveRoomDialog = ({
   collabAPI,
   activeRoomLink,
+  boardName,
   handleClose,
 }: {
   collabAPI: CollabAPI;
   activeRoomLink: string;
+  /** The scene name, sent along when teammates are notified. */
+  boardName?: string | null;
   handleClose: () => void;
 }) => {
   const { t } = useI18n();
@@ -143,6 +148,7 @@ const ActiveRoomDialog = ({
           }}
         />
       </div>
+      <NotifyTeammates boardLink={activeRoomLink} boardName={boardName} />
       <QRCode value={activeRoomLink} />
       <div className="ShareDialog__active__description">
         <p>
@@ -254,6 +260,7 @@ const ShareDialogInner = (props: ShareDialogProps) => {
           <ActiveRoomDialog
             collabAPI={props.collabAPI}
             activeRoomLink={activeRoomLink}
+            boardName={props.boardName}
             handleClose={props.handleClose}
           />
         ) : (
@@ -270,7 +277,7 @@ export const ShareDialog = (props: {
 }) => {
   const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
 
-  const { openDialog } = useUIAppState();
+  const { openDialog, name } = useUIAppState();
 
   useEffect(() => {
     if (openDialog) {
@@ -288,6 +295,7 @@ export const ShareDialog = (props: {
       collabAPI={props.collabAPI}
       onExportToBackend={props.onExportToBackend}
       type={shareDialogState.type}
+      boardName={name}
     />
   );
 };

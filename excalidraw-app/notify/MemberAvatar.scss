@@ -1,0 +1,29 @@
+.excalidraw {
+  .MemberAvatar {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 100%;
+    border: 1px solid var(--avatar-border-color);
+    overflow: hidden;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    font-family: "Assistant";
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    // the background is a light pastel in both themes
+    color: var(--color-gray-90);
+    user-select: none;
+
+    &__image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}

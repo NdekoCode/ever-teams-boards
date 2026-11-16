@@ -147,6 +147,9 @@ import { ExcalidrawPlusPromoBanner } from "./components/ExcalidrawPlusPromoBanne
 import { AppSidebar } from "./components/AppSidebar";
 
 import { Authenticator, authUserAtom } from "./auth";
+import { NotifyTeammates } from "./notify/NotifyTeammates";
+import { BoardMentions } from "./notify/BoardMentions";
+import { everTeamsOriginAtom } from "./auth/everTeamsOrigin";
 
 import type { CollabAPI } from "./collab/Collab";
 
@@ -413,6 +416,7 @@ const ExcalidrawWrapper = () => {
   const userToFollow = useAtomValue(userToFollowAtom);
   const autoStartLive = useRef(false);
   const authUser = useAtomValue(authUserAtom);
+  const everTeamsOrigin = useAtomValue(everTeamsOriginAtom);
 
   const viewportStatusFrame = useMemo(
     () =>
@@ -1095,10 +1099,21 @@ const ExcalidrawWrapper = () => {
             link={latestShareableLink}
             onCloseRequest={() => setLatestShareableLink(null)}
             setErrorMessage={setErrorMessage}
-          />
+          >
+            <NotifyTeammates
+              boardLink={latestShareableLink}
+              boardName={excalidrawAPI?.getAppState().name}
+            />
+          </ShareableLinkDialog>
         )}
         {excalidrawAPI && !isCollabDisabled && (
           <Collab excalidrawAPI={excalidrawAPI} />
+        )}
+        {excalidrawAPI && isCollaborating && everTeamsOrigin && (
+          <BoardMentions
+            excalidrawAPI={excalidrawAPI}
+            everTeamsOrigin={everTeamsOrigin}
+          />
         )}
 
         <ShareDialog

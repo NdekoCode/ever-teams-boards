@@ -445,6 +445,43 @@
     "desc_exitSession": "Stopping the session will disconnect you from the room, but you'll be able to continue working with the scene, locally. Note that this won't affect other people, and they'll still be able to collaborate on their version.",
     "shareTitle": "Join a live collaboration session on Excalidraw"
   },
+  "boardNotify": {
+    "share": {
+      "toggle": "Notify teammates",
+      "intro": "Ever Teams tells the teammates you pick that you shared this Board with them.",
+      "loading": "Loading your teammates…",
+      "loadFailed": "Could not load your teammates.",
+      "retry": "Try again",
+      "noMembers": "You have no teammates to notify yet.",
+      "searchLabel": "Search teammates",
+      "searchPlaceholder": "Search by name",
+      "membersLabel": "Teammates",
+      "noMatch": "No teammate matches \"{{query}}\".",
+      "selected": "{{count}} selected",
+      "limit": "You can notify up to {{max}} teammates at once.",
+      "includeLink": "Include the link so they can open it directly",
+      "includeLinkHint": "The link holds the key that decrypts this Board. Without it, they only learn that you shared a Board with them.",
+      "notify": "Notify",
+      "sending": "Notifying…"
+    },
+    "signIn": "Sign in again",
+    "notifiedOne": "Notified 1 teammate",
+    "notifiedMany": "Notified {{count}} teammates",
+    "errors": {
+      "signedOut": "Your Ever Teams session has ended. Sign in again, then try once more.",
+      "forbidden": "You are not allowed to notify these teammates.",
+      "rateLimited": "Too many notifications in a short time. Try again in a minute.",
+      "unavailable": "Ever Teams cannot send notifications right now. Try again later.",
+      "failed": "Could not notify your teammates."
+    },
+    "mentions": {
+      "listLabel": "Teammates to mention",
+      "notifiedOne": "Notified 1 teammate you mentioned",
+      "notifiedMany": "Notified {{count}} teammates you mentioned",
+      "notNotified": "The teammates you mentioned were not notified.",
+      "failed": "Could not notify the teammates you mentioned."
+    }
+  },
   "errorDialog": {
     "title": "Error"
   },
