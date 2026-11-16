@@ -19,3 +19,17 @@ export const getNotifiedMessage = (count: number): string =>
   count === 1
     ? t("boardNotify.notifiedOne")
     : t("boardNotify.notifiedMany", { count });
+
+/** What to tell the person once Ever Teams notified `count` people they mentioned. */
+export const getMentionNotifiedMessage = (count: number): string =>
+  count === 1
+    ? t("boardNotify.mentions.notifiedOne")
+    : t("boardNotify.mentions.notifiedMany", { count });
+
+/** What to tell the person when the people they mentioned were not notified. */
+export const getMentionErrorMessage = (error: BoardNotifyError): string =>
+  error === "failed"
+    ? t("boardNotify.mentions.failed")
+    : `${t("boardNotify.mentions.notNotified")} ${getNotifyErrorMessage(
+        error,
+      )}`;

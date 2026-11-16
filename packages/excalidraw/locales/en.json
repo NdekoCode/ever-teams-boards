@@ -473,6 +473,13 @@
       "rateLimited": "Too many notifications in a short time. Try again in a minute.",
       "unavailable": "Ever Teams cannot send notifications right now. Try again later.",
       "failed": "Could not notify your teammates."
+    },
+    "mentions": {
+      "listLabel": "Teammates to mention",
+      "notifiedOne": "Notified 1 teammate you mentioned",
+      "notifiedMany": "Notified {{count}} teammates you mentioned",
+      "notNotified": "The teammates you mentioned were not notified.",
+      "failed": "Could not notify the teammates you mentioned."
     }
   },
   "errorDialog": {
