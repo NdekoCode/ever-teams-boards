@@ -44,6 +44,7 @@ export const STORAGE_KEYS = {
   LOCAL_STORAGE_DEBUG: "excalidraw-debug",
   VERSION_DATA_STATE: "version-dataState",
   VERSION_FILES: "version-files",
+  LOCAL_STORAGE_EVER_TEAMS_ORIGIN: "ever-teams-origin",
 
   IDB_LIBRARY: "excalidraw-library",
   IDB_TTD_CHATS: "excalidraw-ttd-chats",
@@ -55,8 +56,6 @@ export const STORAGE_KEYS = {
 export const COOKIES = {
   AUTH_STATE_COOKIE: "excplus-auth",
 } as const;
-
-export const EVER_TEAMS_URL = import.meta.env.VITE_APP_EVER_TEAMS_URL;
 
 export const isExcalidrawPlusSignedUser = document.cookie.includes(
   COOKIES.AUTH_STATE_COOKIE,

@@ -6,8 +6,9 @@ import { isDevEnv } from "@excalidraw/common";
 
 import type { Theme } from "@excalidraw/element/types";
 
+import { useAtomValue } from "../app-jotai";
 import { LanguageList } from "../app-language/LanguageList";
-import { EVER_TEAMS_URL } from "../app_constants";
+import { everTeamsOriginAtom } from "../auth/everTeamsOrigin";
 
 import { saveDebugState } from "./DebugCanvas";
 
@@ -18,6 +19,8 @@ export const AppMainMenu: React.FC<{
   theme: Theme | "system";
   refresh: () => void;
 }> = React.memo((props) => {
+  // Back to the Ever Teams deployment of this visit
+  const everTeamsOrigin = useAtomValue(everTeamsOriginAtom);
   return (
     <MainMenu>
       <MainMenu.DefaultItems.LoadScene />
@@ -35,9 +38,15 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
-      <MainMenu.ItemLink icon={LinkIcon} target="_self" href={EVER_TEAMS_URL}>
-        Ever Teams
-      </MainMenu.ItemLink>
+      {everTeamsOrigin && (
+        <MainMenu.ItemLink
+          icon={LinkIcon}
+          target="_self"
+          href={everTeamsOrigin}
+        >
+          Ever Teams
+        </MainMenu.ItemLink>
+      )}
       {isDevEnv() && (
         <MainMenu.Item
           icon={eyeIcon}

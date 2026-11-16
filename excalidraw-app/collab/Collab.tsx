@@ -88,6 +88,7 @@ import {
   saveUsernameToLocalStorage,
 } from "../data/localStorage";
 import { resetBrowserStateVersions } from "../data/tabSync";
+import { toShareableBoardUrl } from "../auth/everTeamsOrigin";
 
 import { collabErrorIndicatorAtom } from "./CollabError";
 import Portal from "./Portal";
@@ -724,7 +725,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
 
     this.initializeIdleDetector();
 
-    this.setActiveRoomLink(window.location.href);
+    this.setActiveRoomLink(toShareableBoardUrl(window.location.href));
 
     return scenePromise;
   };
