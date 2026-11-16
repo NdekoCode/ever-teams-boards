@@ -63,6 +63,18 @@ vi.mock("socket.io-client", () => {
   };
 });
 
+// The Board shows the app only to people signed in to Ever Teams; these tests
+// are about collaboration, so they start signed in.
+vi.mock("../auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../auth")>();
+  return {
+    ...actual,
+    Authenticator: ({ children }: { children?: React.ReactNode }) => (
+      <>{children}</>
+    ),
+  };
+});
+
 /**
  * These test would deserve to be extended by testing collab with (at least) two clients simultanouesly,
  * while having access to both scenes, appstates stores, histories and etc.
