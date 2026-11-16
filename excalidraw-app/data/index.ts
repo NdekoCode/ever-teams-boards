@@ -1,37 +1,50 @@
-import { compressData, decompressData } from "../../src/data/encode";
+import {
+  compressData,
+  decompressData,
+} from "@excalidraw/excalidraw/data/encode";
 import {
   decryptData,
   generateEncryptionKey,
   IV_LENGTH_BYTES,
-} from "../../src/data/encryption";
-import { serializeAsJSON } from "../../src/data/json";
-import { restore } from "../../src/data/restore";
-import { ImportedDataState } from "../../src/data/types";
-import { isInvisiblySmallElement } from "../../src/element/sizeHelpers";
-import { isInitializedImageElement } from "../../src/element/typeChecks";
-import { ExcalidrawElement, FileId } from "../../src/element/types";
-import { t } from "../../src/i18n";
-import {
+} from "@excalidraw/excalidraw/data/encryption";
+import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
+import { isInvisiblySmallElement } from "@excalidraw/element";
+import { isInitializedImageElement } from "@excalidraw/element";
+import { t } from "@excalidraw/excalidraw/i18n";
+import { bytesToHexString } from "@excalidraw/common";
+
+import type { UserIdleState } from "@excalidraw/common";
+import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
+import type { SceneBounds } from "@excalidraw/element";
+import type {
+  ExcalidrawElement,
+  FileId,
+  OrderedExcalidrawElement,
+} from "@excalidraw/element/types";
+import type {
   AppState,
   BinaryFileData,
   BinaryFiles,
-  UserIdleState,
-} from "../../src/types";
-import { bytesToHexString } from "../../src/utils";
+  SocketId,
+} from "@excalidraw/excalidraw/types";
+import type { MakeBrand } from "@excalidraw/common/utility-types";
+
 import {
   DELETED_ELEMENT_TIMEOUT,
   FILE_UPLOAD_MAX_BYTES,
   ROOM_ID_BYTES,
 } from "../app_constants";
+
 import { encodeFilesForUpload } from "./FileManager";
 import { saveFilesToFirebase } from "./firebase";
 
-export type SyncableExcalidrawElement = ExcalidrawElement & {
-  _brand: "SyncableExcalidrawElement";
-};
+import type { WS_SUBTYPES } from "../app_constants";
+
+export type SyncableExcalidrawElement = OrderedExcalidrawElement &
+  MakeBrand<"SyncableExcalidrawElement">;
 
 export const isSyncableElement = (
-  element: ExcalidrawElement,
+  element: OrderedExcalidrawElement,
 ): element is SyncableExcalidrawElement => {
   if (element.isDeleted) {
     if (element.updated > Date.now() - DELETED_ELEMENT_TIMEOUT) {
@@ -42,7 +55,9 @@ export const isSyncableElement = (
   return !isInvisiblySmallElement(element);
 };
 
-export const getSyncableElements = (elements: readonly ExcalidrawElement[]) =>
+export const getSyncableElements = (
+  elements: readonly OrderedExcalidrawElement[],
+) =>
   elements.filter((element) =>
     isSyncableElement(element),
   ) as SyncableExcalidrawElement[];
@@ -56,68 +71,50 @@ const generateRoomId = async () => {
   return bytesToHexString(buffer);
 };
 
-/**
- * Right now the reason why we resolve connection params (url, polling...)
- * from upstream is to allow changing the params immediately when needed without
- * having to wait for clients to update the SW.
- *
- * If REACT_APP_WS_SERVER_URL env is set, we use that instead (useful for forks)
- */
-export const getCollabServer = async (): Promise<{
-  url: string;
-  polling: boolean;
-}> => {
-  if (import.meta.env.VITE_APP_WS_SERVER_URL) {
-    return {
-      url: import.meta.env.VITE_APP_WS_SERVER_URL,
-      polling: true,
-    };
-  }
-
-  try {
-    const resp = await fetch(
-      `${import.meta.env.VITE_APP_PORTAL_URL}/collab-server`,
-    );
-    return await resp.json();
-  } catch (error) {
-    console.error(error);
-    throw new Error(t("errors.cannotResolveCollabServer"));
-  }
-};
-
 export type EncryptedData = {
   data: ArrayBuffer;
   iv: Uint8Array;
 };
 
 export type SocketUpdateDataSource = {
+  INVALID_RESPONSE: {
+    type: WS_SUBTYPES.INVALID_RESPONSE;
+  };
   SCENE_INIT: {
-    type: "SCENE_INIT";
+    type: WS_SUBTYPES.INIT;
     payload: {
-      elements: readonly ExcalidrawElement[];
+      elements: readonly OrderedExcalidrawElement[];
     };
   };
   SCENE_UPDATE: {
-    type: "SCENE_UPDATE";
+    type: WS_SUBTYPES.UPDATE;
     payload: {
-      elements: readonly ExcalidrawElement[];
+      elements: readonly OrderedExcalidrawElement[];
     };
   };
   MOUSE_LOCATION: {
-    type: "MOUSE_LOCATION";
+    type: WS_SUBTYPES.MOUSE_LOCATION;
     payload: {
-      socketId: string;
-      pointer: { x: number; y: number };
+      socketId: SocketId;
+      pointer: { x: number; y: number; tool: "pointer" | "laser" };
       button: "down" | "up";
       selectedElementIds: AppState["selectedElementIds"];
       username: string;
       avatar: string;
     };
   };
-  IDLE_STATUS: {
-    type: "IDLE_STATUS";
+  USER_VISIBLE_SCENE_BOUNDS: {
+    type: WS_SUBTYPES.USER_VISIBLE_SCENE_BOUNDS;
     payload: {
-      socketId: string;
+      socketId: SocketId;
+      username: string;
+      sceneBounds: SceneBounds;
+    };
+  };
+  IDLE_STATUS: {
+    type: WS_SUBTYPES.IDLE_STATUS;
+    payload: {
+      socketId: SocketId;
       userState: UserIdleState;
       username: string;
       avatar: string;
@@ -126,10 +123,7 @@ export type SocketUpdateDataSource = {
 };
 
 export type SocketUpdateDataIncoming =
-  | SocketUpdateDataSource[keyof SocketUpdateDataSource]
-  | {
-      type: "INVALID_RESPONSE";
-    };
+  SocketUpdateDataSource[keyof SocketUpdateDataSource];
 
 export type SocketUpdateData =
   SocketUpdateDataSource[keyof SocketUpdateDataSource] & {
@@ -207,7 +201,7 @@ const legacy_decodeFromBackend = async ({
   };
 };
 
-const importFromBackend = async (
+export const importFromBackend = async (
   id: string,
   decryptionKey: string,
 ): Promise<ImportedDataState> => {
@@ -247,41 +241,6 @@ const importFromBackend = async (
     console.error(error);
     return {};
   }
-};
-
-export const loadScene = async (
-  id: string | null,
-  privateKey: string | null,
-  // Supply local state even if importing from backend to ensure we restore
-  // localStorage user settings which we do not persist on server.
-  // Non-optional so we don't forget to pass it even if `undefined`.
-  localDataState: ImportedDataState | undefined | null,
-) => {
-  let data;
-  if (id != null && privateKey != null) {
-    // the private key is used to decrypt the content from the server, take
-    // extra care not to leak it
-    data = restore(
-      await importFromBackend(id, privateKey),
-      localDataState?.appState,
-      localDataState?.elements,
-      { repairBindings: true, refreshDimensions: false },
-    );
-  } else {
-    data = restore(localDataState || null, null, null, {
-      repairBindings: true,
-    });
-  }
-
-  return {
-    elements: data.elements,
-    appState: data.appState,
-    // note: this will always be empty because we're not storing files
-    // in the scene database/localStorage, and instead fetch them async
-    // from a different database
-    files: data.files,
-    commitToHistory: false,
-  };
 };
 
 type ExportToBackendResult =

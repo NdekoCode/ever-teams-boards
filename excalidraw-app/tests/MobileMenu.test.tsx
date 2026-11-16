@@ -1,11 +1,10 @@
-import ExcalidrawApp from "../../excalidraw-app";
+import { Excalidraw, WelcomeScreen } from "@excalidraw/excalidraw";
+import { UI } from "@excalidraw/excalidraw/tests/helpers/ui";
 import {
   mockBoundingClientRect,
   render,
   restoreOriginalGetBoundingClientRect,
-} from "../../src/tests/test-utils";
-
-import { UI } from "../../src/tests/helpers/ui";
+} from "@excalidraw/excalidraw/tests/test-utils";
 
 describe("Test MobileMenu", () => {
   const { h } = window;
@@ -16,25 +15,20 @@ describe("Test MobileMenu", () => {
   });
 
   beforeEach(async () => {
-    await render(<ExcalidrawApp />);
-    //@ts-ignore
-    h.app.refreshDeviceState(h.app.excalidrawContainerRef.current!);
+    await render(
+      <Excalidraw>
+        <WelcomeScreen />
+      </Excalidraw>,
+    );
+    h.app.refreshEditorInterface();
   });
 
   afterAll(() => {
     restoreOriginalGetBoundingClientRect();
   });
 
-  it("should set device correctly", () => {
-    expect(h.app.device).toMatchInlineSnapshot(`
-      {
-        "canDeviceFitSidebar": false,
-        "isLandscape": true,
-        "isMobile": true,
-        "isSmScreen": false,
-        "isTouchScreen": false,
-      }
-    `);
+  it("should set editor interface correctly", () => {
+    expect(h.app.editorInterface.formFactor).toBe("phone");
   });
 
   it("should initialize with welcome screen and hide once user interacts", async () => {
